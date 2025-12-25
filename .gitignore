@@ -1,0 +1,16 @@
+# Serena MCP cache
+.serena/
+
+# Local config
+.claude/
+.mcp.json
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Accidental files
+nul
+
+# Notebooks to ignore
+explore_similar_buildings.ipynb
