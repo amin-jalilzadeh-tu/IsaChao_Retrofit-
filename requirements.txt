@@ -1,12 +1,22 @@
+# Web framework
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+
+# ML and Data
+torch
+numpy
+pandas
+scikit-learn
+joblib
+
+# Optimization
+pymoo
+cvxpy
+
+# Visualization (for Streamlit app)
 streamlit
 plotly
 seaborn
 matplotlib
-scikit-learn
-numpy
-pandas
-torch -f https://download.pytorch.org/whl/cpu
-cvxpy
 shap
-joblib
-pymoo
