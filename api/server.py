@@ -192,7 +192,9 @@ def run_inference(design_vars: List[DesignVariables], method: str, model_type: s
 
         # Handle different model output formats
         if isinstance(outputs, tuple):
-            predictions = outputs[0]  # First element is predictions
+            # Model returns (energy, cost, emission, comfort) as separate tensors
+            # Concatenate them into a single tensor
+            predictions = torch.cat(outputs, dim=1)
         else:
             predictions = outputs
 
