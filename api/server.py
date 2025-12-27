@@ -8,6 +8,7 @@ Run with: uvicorn api.server:app --reload --port 8000
 """
 
 import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # Fix OpenMP conflict on Windows
 import sys
 from pathlib import Path
 from typing import List, Optional
@@ -23,6 +24,10 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Load environment variables (override system env vars with .env file)
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 # Import Isabella2 modules
 try:
     from src.inference_pipeline import select_model
@@ -33,6 +38,14 @@ try:
 except ImportError as e:
     print(f"Warning: Could not import Isabella2 modules: {e}")
     MODELS_AVAILABLE = False
+
+# Import chat router
+try:
+    from api.chat.endpoints import router as chat_router
+    CHAT_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import chat module: {e}")
+    CHAT_AVAILABLE = False
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -55,6 +68,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount chat router if available
+if CHAT_AVAILABLE:
+    app.include_router(chat_router)
 
 # ============================================
 # Pydantic Models
@@ -288,6 +305,7 @@ async def health_check():
     return {
         "status": "ok",
         "models_available": MODELS_AVAILABLE,
+        "chat_available": CHAT_AVAILABLE,
         "project_root": str(PROJECT_ROOT)
     }
 

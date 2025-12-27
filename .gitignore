@@ -14,3 +14,9 @@ nul
 
 # Notebooks to ignore
 explore_similar_buildings.ipynb
+
+# LLM & RAG
+.env
+chroma_db/
+*.db
+*.sqlite3
