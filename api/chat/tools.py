@@ -235,6 +235,55 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "query_buildings",
+                "description": "Query the building database to find buildings matching specified criteria. Use for finding similar buildings by area, height, year, type, etc.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "filters": {
+                            "type": "array",
+                            "description": "List of filter conditions",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "column": {
+                                        "type": "string",
+                                        "enum": ["area", "height", "gem_bouwlagen", "bouwjaar", "residential_type", "postcode", "average_wwr"],
+                                        "description": "Column to filter on"
+                                    },
+                                    "operator": {
+                                        "type": "string",
+                                        "enum": ["eq", "gt", "lt", "gte", "lte", "between", "ilike"],
+                                        "description": "Comparison operator"
+                                    },
+                                    "value": {
+                                        "description": "Value to compare (for between, use [min, max])"
+                                    }
+                                },
+                                "required": ["column", "operator", "value"]
+                            }
+                        },
+                        "sort_by": {
+                            "type": "string",
+                            "enum": ["area", "height", "bouwjaar", "gem_bouwlagen"],
+                            "description": "Column to sort by"
+                        },
+                        "sort_order": {
+                            "type": "string",
+                            "enum": ["asc", "desc"],
+                            "description": "Sort order (default: asc)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default: 10, max: 50)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "get_stage_info",
                 "description": "Get information about a specific stage in the 9-stage pipeline.",
                 "parameters": {
@@ -257,6 +306,103 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                         }
                     },
                     "required": ["stage"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "bulk_create_scenarios",
+                "description": "Generate multiple retrofit scenarios with varying design parameters using Latin Hypercube Sampling (LHS), random, or grid sampling. Use this when the user wants to create many scenarios at once for exploration or optimization.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "count": {
+                            "type": "integer",
+                            "description": "Number of scenarios to generate (e.g., 100, 400, 1000). Maximum 1000.",
+                            "minimum": 1,
+                            "maximum": 1000
+                        },
+                        "variation": {
+                            "type": "string",
+                            "enum": ["lhs", "random", "grid"],
+                            "description": "Sampling method: 'lhs' (Latin Hypercube - best coverage), 'random', or 'grid' (evenly spaced)"
+                        },
+                        "run_inference": {
+                            "type": "boolean",
+                            "description": "Whether to run predictions on generated scenarios (default: true)"
+                        }
+                    },
+                    "required": ["count"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "run_optimization",
+                "description": "Run NSGA-II multi-objective optimization on existing scenarios to find Pareto-optimal solutions. Should be called after bulk_create_scenarios.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "generations": {
+                            "type": "integer",
+                            "description": "Number of NSGA-II generations (default: 100)"
+                        },
+                        "population_size": {
+                            "type": "integer",
+                            "description": "Population size per generation (default: 50)"
+                        },
+                        "time_horizon": {
+                            "type": "integer",
+                            "enum": [2020, 2050, 2100],
+                            "description": "Climate scenario year"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "set_optimization_bounds",
+                "description": "Set the min/max bounds (search space) for NSGA-II optimization design variables. This defines the range of values the optimizer will explore for windows U-factor, wall R-value, roof R-value, and floor R-value. Use when user wants to narrow or expand the optimization search space.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "windows_min": {
+                            "type": "number",
+                            "description": "Minimum Windows U-Factor (W/m²K). Lower values = better insulation. Typical range: 0.8-2.9"
+                        },
+                        "windows_max": {
+                            "type": "number",
+                            "description": "Maximum Windows U-Factor (W/m²K). Higher values = worse insulation."
+                        },
+                        "wall_min": {
+                            "type": "number",
+                            "description": "Minimum External Walls R-value (m²K/W). Higher values = better insulation. Typical range: 0.45-6.7"
+                        },
+                        "wall_max": {
+                            "type": "number",
+                            "description": "Maximum External Walls R-value (m²K/W)."
+                        },
+                        "roof_min": {
+                            "type": "number",
+                            "description": "Minimum Roof R-value (m²K/W). Higher values = better insulation. Typical range: 0.48-8.7"
+                        },
+                        "roof_max": {
+                            "type": "number",
+                            "description": "Maximum Roof R-value (m²K/W)."
+                        },
+                        "floor_min": {
+                            "type": "number",
+                            "description": "Minimum Ground Floor R-value (m²K/W). Higher values = better insulation. Typical range: 0.41-5.6"
+                        },
+                        "floor_max": {
+                            "type": "number",
+                            "description": "Maximum Ground Floor R-value (m²K/W)."
+                        }
+                    }
                 }
             }
         }
@@ -286,6 +432,8 @@ async def execute_tool(
         "find_similar_buildings": _find_similar_buildings,
         "explain_mcdm_ranking": _explain_mcdm_ranking,
         "get_stage_info": _get_stage_info,
+        "query_buildings": _query_buildings,
+        "set_optimization_bounds": _set_optimization_bounds,
     }
 
     handler = tool_handlers.get(tool_name)
@@ -482,6 +630,106 @@ async def _explain_mcdm_ranking(
     }
 
 
+async def _query_buildings(
+    args: Dict[str, Any],
+    context: Optional[SessionContext]
+) -> Dict[str, Any]:
+    """Query the building database with filters."""
+    try:
+        from api.db.connection import run_query_with_count, test_connection
+        from api.config.settings import settings
+
+        # Check connection
+        if not test_connection():
+            return {
+                "error": "Database connection not available",
+                "buildings": [],
+                "total": 0
+            }
+
+        # Build WHERE clause from filters
+        filters = args.get("filters", [])
+        conditions = []
+        params = []
+
+        allowed_columns = {"area", "height", "gem_bouwlagen", "bouwjaar", "residential_type", "postcode", "average_wwr"}
+
+        for f in filters:
+            col = f.get("column")
+            op = f.get("operator")
+            val = f.get("value")
+
+            if col not in allowed_columns:
+                continue
+
+            if op == "eq":
+                conditions.append(f"{col} = %s")
+                params.append(val)
+            elif op == "gt":
+                conditions.append(f"{col} > %s")
+                params.append(val)
+            elif op == "lt":
+                conditions.append(f"{col} < %s")
+                params.append(val)
+            elif op == "gte":
+                conditions.append(f"{col} >= %s")
+                params.append(val)
+            elif op == "lte":
+                conditions.append(f"{col} <= %s")
+                params.append(val)
+            elif op == "between" and isinstance(val, list) and len(val) == 2:
+                conditions.append(f"{col} BETWEEN %s AND %s")
+                params.extend(val)
+            elif op == "ilike":
+                conditions.append(f"{col} ILIKE %s")
+                params.append(f"%{val}%")
+
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+        table = f"{settings.db_schema}.{settings.db_table}"
+
+        # Sorting
+        sort_by = args.get("sort_by", "pand_id")
+        if sort_by not in allowed_columns and sort_by != "pand_id":
+            sort_by = "pand_id"
+        sort_order = args.get("sort_order", "asc")
+        if sort_order not in ["asc", "desc"]:
+            sort_order = "asc"
+
+        # Limit
+        limit = min(args.get("limit", 10), 50)
+
+        # Build query
+        query = f"""
+            SELECT pand_id, area, height, gem_bouwlagen as floors, residential_type,
+                   bouwjaar as year, postcode, average_wwr
+            FROM {table}
+            WHERE {where_clause}
+            ORDER BY {sort_by} {sort_order}
+            LIMIT %s
+        """
+        count_query = f"SELECT COUNT(*) as count FROM {table} WHERE {where_clause}"
+
+        query_params = tuple(params + [limit])
+        count_params = tuple(params) if params else None
+
+        results, total = run_query_with_count(query, count_query, count_params)
+
+        return {
+            "buildings": results,
+            "total": total,
+            "returned": len(results),
+            "filters_applied": len(filters),
+            "message": f"Found {total} buildings matching your criteria. Showing top {len(results)}."
+        }
+
+    except Exception as e:
+        return {
+            "error": str(e),
+            "buildings": [],
+            "total": 0
+        }
+
+
 async def _get_stage_info(
     args: Dict[str, Any],
     context: Optional[SessionContext]
@@ -559,4 +807,75 @@ async def _get_stage_info(
         return {
             "error": f"Unknown stage: {stage}",
             "available_stages": list(stage_info.keys())
+        }
+
+
+async def _set_optimization_bounds(
+    args: Dict[str, Any],
+    context: Optional[SessionContext]
+) -> Dict[str, Any]:
+    """Set optimization bounds for NSGA-II search space.
+
+    This tool updates the design variable bounds that define the search space
+    for multi-objective optimization. The frontend will sync these bounds
+    to the UI and use them when running optimization.
+    """
+    # Default bounds (matching frontend defaults)
+    default_bounds = {
+        "windows_U_Factor": {"min": 0.8, "max": 2.9},
+        "groundfloor_thermal_resistance": {"min": 0.41, "max": 5.6},
+        "ext_walls_thermal_resistance": {"min": 0.45, "max": 6.7},
+        "roof_thermal_resistance": {"min": 0.48, "max": 8.7}
+    }
+
+    # Start with existing bounds from context or defaults
+    bounds = default_bounds.copy()
+    changes = []
+
+    # Update windows U-factor bounds
+    if args.get("windows_min") is not None or args.get("windows_max") is not None:
+        bounds["windows_U_Factor"] = {
+            "min": args.get("windows_min", bounds["windows_U_Factor"]["min"]),
+            "max": args.get("windows_max", bounds["windows_U_Factor"]["max"])
+        }
+        changes.append(f"Windows U-Factor: {bounds['windows_U_Factor']['min']}-{bounds['windows_U_Factor']['max']} W/m²K")
+
+    # Update external walls R-value bounds
+    if args.get("wall_min") is not None or args.get("wall_max") is not None:
+        bounds["ext_walls_thermal_resistance"] = {
+            "min": args.get("wall_min", bounds["ext_walls_thermal_resistance"]["min"]),
+            "max": args.get("wall_max", bounds["ext_walls_thermal_resistance"]["max"])
+        }
+        changes.append(f"External Walls R: {bounds['ext_walls_thermal_resistance']['min']}-{bounds['ext_walls_thermal_resistance']['max']} m²K/W")
+
+    # Update roof R-value bounds
+    if args.get("roof_min") is not None or args.get("roof_max") is not None:
+        bounds["roof_thermal_resistance"] = {
+            "min": args.get("roof_min", bounds["roof_thermal_resistance"]["min"]),
+            "max": args.get("roof_max", bounds["roof_thermal_resistance"]["max"])
+        }
+        changes.append(f"Roof R: {bounds['roof_thermal_resistance']['min']}-{bounds['roof_thermal_resistance']['max']} m²K/W")
+
+    # Update ground floor R-value bounds
+    if args.get("floor_min") is not None or args.get("floor_max") is not None:
+        bounds["groundfloor_thermal_resistance"] = {
+            "min": args.get("floor_min", bounds["groundfloor_thermal_resistance"]["min"]),
+            "max": args.get("floor_max", bounds["groundfloor_thermal_resistance"]["max"])
+        }
+        changes.append(f"Ground Floor R: {bounds['groundfloor_thermal_resistance']['min']}-{bounds['groundfloor_thermal_resistance']['max']} m²K/W")
+
+    if changes:
+        return {
+            "status": "success",
+            "action": "set_optimization_bounds",
+            "bounds": bounds,
+            "changes": changes,
+            "message": f"Updated optimization bounds:\n" + "\n".join(f"• {c}" for c in changes)
+        }
+    else:
+        return {
+            "status": "info",
+            "action": "set_optimization_bounds",
+            "bounds": bounds,
+            "message": "No bounds specified to update. Current bounds shown. Try: 'Set windows U-factor from 1.0 to 2.0'"
         }

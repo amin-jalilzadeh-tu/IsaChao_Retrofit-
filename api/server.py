@@ -47,6 +47,14 @@ except ImportError as e:
     print(f"Warning: Could not import chat module: {e}")
     CHAT_AVAILABLE = False
 
+# Import buildings router
+try:
+    from api.buildings.endpoints import router as buildings_router
+    BUILDINGS_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import buildings module: {e}")
+    BUILDINGS_AVAILABLE = False
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Isabella2 Retrofit API",
@@ -72,6 +80,10 @@ app.add_middleware(
 # Mount chat router if available
 if CHAT_AVAILABLE:
     app.include_router(chat_router)
+
+# Mount buildings router if available
+if BUILDINGS_AVAILABLE:
+    app.include_router(buildings_router)
 
 # ============================================
 # Pydantic Models
@@ -306,6 +318,7 @@ async def health_check():
         "status": "ok",
         "models_available": MODELS_AVAILABLE,
         "chat_available": CHAT_AVAILABLE,
+        "buildings_available": BUILDINGS_AVAILABLE,
         "project_root": str(PROJECT_ROOT)
     }
 

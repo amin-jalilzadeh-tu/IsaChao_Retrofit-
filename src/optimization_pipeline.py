@@ -224,11 +224,14 @@ def constraint_based_moo(method, model_type, input_size=5, hidden_size=256,
 
     # 4) Solve
     from pymoo.optimize import minimize
+    import time
+    # Use time-based seed for variation between runs
+    random_seed = int(time.time() * 1000) % 2147483647
     res = minimize(
         problem,
         algorithm,
         ('n_gen', n_generations),
-        seed=42,
+        seed=random_seed,
         verbose=True
     )
 

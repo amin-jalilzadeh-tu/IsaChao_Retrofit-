@@ -16,8 +16,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    # OpenAI API Configuration
-    openai_api_key: str
+    # OpenAI API Configuration (optional for building database features)
+    openai_api_key: str | None = None
     openai_org_id: str | None = None
 
     # ChromaDB Configuration
@@ -51,6 +51,15 @@ class Settings(BaseSettings):
     # Session Cache
     session_cache_ttl: int = 3600  # 1 hour
     session_cache_maxsize: int = 1000
+
+    # PostgreSQL Building Database
+    db_host: str = "localhost"
+    db_port: int = 5433
+    db_name: str = "research"
+    db_user: str = "aminj"
+    db_password: str = ""  # Set via DB_PASSWORD env var
+    db_schema: str = "amin"
+    db_table: str = "buildings_1_deducted"
 
     class Config:
         env_file = ".env"
