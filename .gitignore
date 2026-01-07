@@ -20,3 +20,18 @@ explore_similar_buildings.ipynb
 chroma_db/
 *.db
 *.sqlite3
+
+# Personal/Sensitive folders - not for sharing
+__Artic2/
+_Artic_dis/
+_Articlee/
+_Thesis/
+.devcontainer/
+.playwright-mcp/
+api/
+ARCHIEVE/
+C:MCP_Servers/
+CMCP_Servers/
+
+# Node modules
+node_modules/
