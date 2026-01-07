@@ -33,5 +33,10 @@ ARCHIEVE/
 C:MCP_Servers/
 CMCP_Servers/
 
+# Files with sensitive data
+a.ini
+Untitled-1.ini
+*.ini
+
 # Node modules
 node_modules/
